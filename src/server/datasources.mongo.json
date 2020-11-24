@@ -1,0 +1,14 @@
+{
+  "mongo": {
+    "name": "mongo",
+    "connector": "mongodb",
+    "host": "${MONGO_HOST}",
+    "port": "${MONGO_PORT}",
+    "url": "",
+    "useNewUrlParser": true,
+    "database": "${MONGO_DB}",
+    "password": "${MONGO_PASSWORD}",
+    "username": "${MONGO_USER}",
+    "authSource": "${MONGO_AUTH_DB}"
+  }
+}

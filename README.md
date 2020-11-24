@@ -37,8 +37,19 @@ Optional:
 - MONGO_USER - The username used to access Mongo. If you are using an unsecured Mongo instance, leave this blank.
 - MONGO_PASS - The password to access Mongo. If you are using an unsecured Mongo instance, leave this blank.
 - MONGO_DB - The name of the database within Mongo. This can be left blank and the default database name will be used.
+- MONGO_AUTH_DB - The name of the authentication database, by default this is `admin`.
+- MONGO_INITDB_ROOT_USERNAME
+- MONGO_INITDB_ROOT_PASSWORD
 
-You must also change the datasource listed in `src/server/model-config.json` to `mongo` as seen below:
+You can use the environment specific configuration to choose the right datasource settings. By default the used datasource is the `in-memory` datasource configured in the default `datasources.json` file in the `src/server` directory. To use the `mongo` datasource, you can set the `NODE_ENV` to `mongo`. 
+
+```
+NODE_ENV=mongo [environment variables] npm start
+```
+
+This will use the `datasources.mongo.json` file to configure the datasources. For more details, scroll further down.
+
+You can also change the datasource listed in `src/server/model-config.json` to `mongo` as seen below:
 
   ```json
   "entry": {
@@ -58,17 +69,42 @@ Next, you will need to replace the src/server/datasources.json file with the fol
     "connector": "memory"
   },
   "mongo": {
+    "name": "mongo",
+    "connector": "mongodb",
     "host": "${MONGO_HOST}",
     "port": "${MONGO_PORT}",
     "url": "",
+    "useNewUrlParser": true,
     "database": "${MONGO_DB}",
     "password": "${MONGO_PASS}",
-    "name": "mongo",
-    "user": "${MONGO_USER}",
-    "useNewUrlParser": true,
-    "connector": "mongodb"
+    "username": "${MONGO_USER}",
+    "authSource": "${MONGO_AUTH_DB}"
   }
 }
+```
+
+Run test Mongo with Docker (on MacOS):
+
+```
+MONGO_USER=mongoadmin
+MONGO_PASSWORD=m0n90s3cr3t
+MONGO_HOST=$(ipconfig getifaddr en0)
+MONGO_PORT=27017
+MONGO_DB=entries
+MONGO_AUTH_DB=admin
+
+docker run -d -p 27017:27017 --name my-mongo -e MONGO_INITDB_ROOT_USERNAME=$MONGO_USER -e MONGO_INITDB_ROOT_PASSWORD=$MONGO_PASSWORD -e MONGO_INITDB_DATABASE=$MONGO_DB -e MONGO_INITDB_USERNAME=$MONGO_USER -e MONGO_INITDB_PASSWORD=$MONGO_PASSWORD mongo:4.4
+
+docker ps -a
+CID=<container_id>
+
+docker exec -e MONGO_USER=$MONGO_USER -e MONGO_PASSWORD=$MONGO_PASSWORD -e MONGO_DB=$MONGO_DB -it $CID bash
+# mongo $MONGO_DB --host 127.0.0.1 --authenticationDatabase admin -u $MONGO_USER -p $MONGO_PASSWORD
+> exit
+# exit
+
+NODE_ENV=mongo MONGO_USER=$MONGO_USER MONGO_PASSWORD=$MONGO_PASSWORD MONGO_HOST=$MONGO_HOST MONGO_PORT=$MONGO_PORT MONGO_DB=$MONGO_DB MONGO_AUTH_DB=$MONGO_AUTH_DB npm start
+
 ```
 
 ### Data Model
