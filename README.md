@@ -37,8 +37,19 @@ Optional:
 - MONGO_USER - The username used to access Mongo. If you are using an unsecured Mongo instance, leave this blank.
 - MONGO_PASS - The password to access Mongo. If you are using an unsecured Mongo instance, leave this blank.
 - MONGO_DB - The name of the database within Mongo. This can be left blank and the default database name will be used.
+- MONGO_AUTH_DB - The name of the authentication database, by default this is `admin`.
+- MONGO_INITDB_ROOT_USERNAME
+- MONGO_INITDB_ROOT_PASSWORD
 
-You must also change the datasource listed in `src/server/model-config.json` to `mongo` as seen below:
+You can use the environment specific configuration to choose the right datasource settings. By default the used datasource is the `in-memory` datasource configured in the default `datasources.json` file in the `src/server` directory. To use the `mongo` datasource, you can set the `NODE_ENV` to `mongo`. 
+
+```
+NODE_ENV=mongo [environment variables] npm start
+```
+
+This will use the `datasources.mongo.json` file to configure the datasources. For more details, scroll further down.
+
+You can also change the datasource listed in `src/server/model-config.json` to `mongo` as seen below:
 
   ```json
   "entry": {
