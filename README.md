@@ -77,7 +77,8 @@ Next, you will need to replace the src/server/datasources.json file with the fol
     "useNewUrlParser": true,
     "database": "${MONGO_DB}",
     "password": "${MONGO_PASS}",
-    "username": "${MONGO_USER}"
+    "username": "${MONGO_USER}",
+    "authSource": "${MONGO_AUTH_DB}"
   }
 }
 ```
