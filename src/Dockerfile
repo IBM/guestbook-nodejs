@@ -1,4 +1,6 @@
-FROM node:12
+FROM node:18
+
+ENV NODE_ENV=$NODE_ENV
 
 COPY ./ /home/node/app
 

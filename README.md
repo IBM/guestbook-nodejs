@@ -5,7 +5,7 @@ In Development!
 
 ## To run
 
-### Option 1: Running locally using node
+### Option 1: Running locally using Node.js and npm
 
 ```bash
 cd src
@@ -13,17 +13,54 @@ npm install
 npm start
 ```
 
-### Option 2: Running the container
+### Option 2: Build and Run the container
+
+To build and run containers, I used podman, a more secure alternative to Docker. Podman is a daemonless container engine for developing, managing, and running OCI Containers. Containers can either be run as root or in rootless mode.
+
+If you do not have podman, follow the [Podman Installation Instructions](https://podman.io/getting-started/installation).
+
+Start podman,
 
 ```bash
-docker run -p 3000:3000 -d odrodrig/guestbook-nodejs:latest
+podman machine start
+```
+
+Build the container,
+
+```bash
+cd src
+podman build -t guestbook-nodejs:1.0.0 .
+```
+
+Run the container,
+
+```bash
+podman run --name my-guestbook -p 3000:3000 -d guestbook-nodejs:1.0.0
 ```
 
 The application can be accessed through http://localhost:3000/
-
 The API Explorer can be accessed through http://localhost:3000/explorer
 
 ## Datasources
+
+### MongoDB
+
+#### Run MongoDB a local container
+
+```bash
+podman run --name my-mongo -d mongo:5.0
+```
+
+Check that both MongoDB and Guestbook are running,
+
+```bash
+❯ podman ps -a
+CONTAINER ID    IMAGE   COMMAND    CREATED     STATUS     PORTS    NAMES
+942e4e188c1a  docker.io/library/mongo:5.0    mongod     5 days ago  Up 5 days ago    my-mongo
+e7db58429864  localhost/guestbook-nodejs:1.0.0  /bin/sh -c npm st...  5 days ago  Up 5 days ago  0.0.0.0:3000->3000/tcp  my-guestbook
+```
+
+#### Configure MongoDB DataSource
 
 This application has a PersistedModel representation for the data model which is compatible with Mongo and other similar databases. By default the app stores data in memory which means that the data does not persist if the app crashes or goes down for any reason. You have the option to use Mongo to persist the data from the application by adding the following environment variables:
 
@@ -37,6 +74,8 @@ Optional:
 - MONGO_USER - The username used to access Mongo. If you are using an unsecured Mongo instance, leave this blank.
 - MONGO_PASS - The password to access Mongo. If you are using an unsecured Mongo instance, leave this blank.
 - MONGO_DB - The name of the database within Mongo. This can be left blank and the default database name will be used.
+- MONGO_AUTH_DB=admin
+- NODE_ENV=mongo - setting the NODE_ENV to mongo, will trigger Loopback to select the right environment config file.
 
 You must also change the datasource listed in `src/server/model-config.json` to `mongo` as seen below:
 
@@ -66,26 +105,70 @@ Next, you will need to replace the src/server/datasources.json file with the fol
     "name": "mongo",
     "user": "${MONGO_USER}",
     "useNewUrlParser": true,
-    "connector": "mongodb"
+    "connector": "mongodb",
+    "authSource": "admin"
   }
 }
+```
+
+Run mongo with the following,
+
+```bash
+export NODE_ENV=mongo
+export MONGO_USER=mongoadmin
+export MONGO_PASS=m0n90s3cr3t
+export MONGO_HOST=$(ipconfig getifaddr en0)
+export MONGO_PORT=27017
+export MONGO_DB=entries
+export MONGO_AUTH_DB=admin
+
+podman run -d -p 27017:27017 --name my-mongo -e MONGO_INITDB_ROOT_USERNAME=$MONGO_USER -e MONGO_INITDB_ROOT_PASSWORD=$MONGO_PASS -e MONGO_INITDB_DATABASE=$MONGO_DB -e MONGO_INITDB_USERNAME=$MONGO_USER -e MONGO_INITDB_PASSWORD=$MONGO_PASS mongo:5.0
+
+podman ps -a
+export CID1=<container_id1>
+
+podman exec -e MONGO_USER=$MONGO_USER -e MONGO_PASS=$MONGO_PASS -e MONGO_DB=$MONGO_DB -it $CID1 bash
+
+root@<CID1>:/# mongo $MONGO_DB --host 127.0.0.1 --authenticationDatabase admin -u $MONGO_USER -p $MONGO_PASS
+MongoDB shell version v5.0.8
+connecting to: mongodb://127.0.0.1:27017/entries?authSource=admin&compressors=disabled&gssapiServiceName=mongodb
+Implicit session: session { "id" : UUID("ce9ac001-464f-491b-955f-b4a92981636b") }
+MongoDB server version: 5.0.8
+...
+> exit
+bye
+root@<CID1>:/# exit
+
+podman build -t guestbook-nodejs:1.0.0 --build-arg NODE_ENV=$NODE_ENV .
+
+podman run -d -p 3000:3000 --name my-guestbook -e NODE_ENV=mongo -e MONGO_USER=$MONGO_USER -e MONGO_PASS=$MONGO_PASS -e MONGO_HOST=$MONGO_HOST -e MONGO_PORT=$MONGO_PORT -e MONGO_DB=$MONGO_DB -e MONGO_AUTH_DB=$MONGO_AUTH_DB guestbook-nodejs:1.0.0
+```
+
+To test persistence, run the following,
+
+```bash
+podman ps -a
+export CID2=<container_id>
+
+podman stop $CID2
+podman start $CID2
 ```
 
 ### Data Model
 
 The `entry` model has the following properties:
 
-  - message: 
-    - type: String
-  - timestamp: 
-    - type: [Javascript date object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date)
+- message: 
+  - type: String
+- timestamp: 
+  - type: [Javascript date object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date)
 
 ### Contribute
 
 1. Fork the `guestbook-nodejs` repo to your own organization.
 1. Clone your fork to your local host,
 
-    ```
+    ```bash
     export USERNAME=<your-github-username>
     git clone https://github.com/$USERNAME/guestbook-nodejs.git
     cd guestbook-nodejs
@@ -97,7 +180,7 @@ The `entry` model has the following properties:
 
 ### Generate App from OpenAPI Spec
 
-```
+```bash
 % lb -v
 4.2.1 (generator-loopback@5.9.4 loopback-workspace@4.5.0)
 
